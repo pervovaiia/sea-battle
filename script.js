@@ -873,6 +873,7 @@ function init() {
   elHint.textContent = `Ставим первый корабль: ${state.shipQueue[0]} клетки`;
   btnStartGame.disabled = true;
   btnUndo.disabled = true;
+  btnRotate.disabled = false;
 
   // Сбросить Энчантикс
   btnEnchantix.disabled = false;
