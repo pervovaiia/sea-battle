@@ -1,0 +1,876 @@
+/* ═══════════════════════════════════════════
+   ПЕРЕМЕННЫЕ
+═══════════════════════════════════════════ */
+:root {
+  --bg:           #080c1a;
+  --cell-bg:      #0d1f3c;
+  --grid-line:    #1a3a6e;
+  --ship:         #4fa8ff;
+  --ship-glow:    rgba(79, 168, 255, 0.45);
+  --hit:          #ff3c5a;
+  --hit-glow:     rgba(255, 60, 90, 0.6);
+  --miss:         #334466;
+  --accent:       #00c8ff;
+  --accent-glow:  rgba(0, 200, 255, 0.4);
+  --text:         #c8d8f0;
+  --text-dim:     #5a7aa8;
+  --enchantix-a:  #ff79c6;
+  --enchantix-b:  #bd93f9;
+  --enchantix-glow: rgba(189, 147, 249, 0.6);
+
+  --cell:         36px;
+  --cell-mobile:  28px;
+  --radius-cell:  2px;
+  --radius-btn:   3px;
+}
+
+/* ═══════════════════════════════════════════
+   СБРОС И БАЗА
+═══════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════════
+   CRT OVERLAY
+═══════════════════════════════════════════ */
+.crt-overlay {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(0, 0, 0, 0.04) 3px,
+    rgba(0, 0, 0, 0.04) 4px
+  );
+}
+
+/* ═══════════════════════════════════════════
+   ЭКРАНЫ
+═══════════════════════════════════════════ */
+.screen {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px 48px;
+  min-height: 100vh;
+}
+.screen.active { display: flex; }
+
+/* ═══════════════════════════════════════════
+   ЗАГОЛОВОК
+═══════════════════════════════════════════ */
+.game-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(14px, 3vw, 22px);
+  color: #ffffff;
+  text-shadow:
+    0 0 6px var(--accent),
+    0 0 14px rgba(0, 200, 255, 0.35);
+  letter-spacing: 2px;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════════
+   МЕТКИ ПОЛЕЙ
+═══════════════════════════════════════════ */
+.board-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* ═══════════════════════════════════════════
+   ИГРОВАЯ СЕТКА
+═══════════════════════════════════════════ */
+.board {
+  display: grid;
+  grid-template-columns: repeat(10, var(--cell));
+  grid-template-rows:    repeat(10, var(--cell));
+  gap: 2px;
+  background: var(--grid-line);
+  border: 2px solid var(--grid-line);
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px #0a1828, 0 8px 32px rgba(0,0,0,0.6);
+}
+
+/* клетка */
+.cell {
+  width:  var(--cell);
+  height: var(--cell);
+  background: var(--cell-bg);
+  border-radius: var(--radius-cell);
+  cursor: default;
+  position: relative;
+  transition: background 0.12s, box-shadow 0.12s;
+}
+
+/* ── состояния клетки ── */
+.cell.ship {
+  background: #0a2a1a;
+  box-shadow: inset 0 0 0 2px var(--ship), 0 0 8px var(--ship-glow);
+}
+
+/* ── попадание (ранен) ── */
+.cell.hit {
+  background: #1e0009;
+  box-shadow: inset 0 0 0 1px rgba(255, 60, 90, 0.45), 0 0 5px rgba(255, 60, 90, 0.15);
+}
+.cell.hit::before,
+.cell.hit::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 60, 90, 0.7);
+  border-radius: 1px;
+  top: 50%; left: 50%;
+}
+.cell.hit::before {
+  width: 2px; height: 58%;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.cell.hit::after {
+  width: 2px; height: 58%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+/* ── промах ── */
+.cell.miss {
+  background: #111e30;
+}
+.cell.miss::before {
+  content: '';
+  position: absolute;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--miss);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* ── потоплен (ярче и насыщеннее чем просто попадание) ── */
+.cell.sunk {
+  background: #2d0010;
+  box-shadow: inset 0 0 0 2px rgba(255, 60, 90, 0.9), 0 0 14px rgba(255, 60, 90, 0.45);
+}
+.cell.sunk::before,
+.cell.sunk::after {
+  content: '';
+  position: absolute;
+  background: #ff8096;
+  border-radius: 1px;
+  top: 50%; left: 50%;
+}
+.cell.sunk::before {
+  width: 2px; height: 58%;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.cell.sunk::after {
+  width: 2px; height: 58%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+/* поле врага — курсор и hover */
+.board.enemy .cell:not(.hit):not(.miss) {
+  cursor: crosshair;
+}
+.board.enemy .cell:not(.hit):not(.miss):hover {
+  background: #1a3050;
+  box-shadow: 0 0 12px rgba(255,255,255,0.15);
+}
+
+/* предпросмотр при расстановке */
+.cell.preview-valid {
+  background: #0a2a1a;
+  box-shadow: inset 0 0 0 2px var(--ship), 0 0 8px var(--ship-glow);
+}
+.cell.preview-invalid {
+  background: #2a0010;
+  box-shadow: inset 0 0 0 2px var(--hit);
+}
+
+/* ── Enchantix зона 3×3 ── */
+.cell.enchantix-zone {
+  background: linear-gradient(135deg, rgba(255,121,198,0.3), rgba(189,147,249,0.3));
+  box-shadow:
+    inset 0 0 0 2px var(--enchantix-a),
+    0 0 14px var(--enchantix-glow);
+  animation: enchantix-pulse 0.6s ease-in-out infinite alternate;
+}
+.cell.enchantix-zone::after {
+  content: '✦';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--enchantix-a);
+  opacity: 0.7;
+  animation: enchantix-star 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes enchantix-pulse {
+  from { box-shadow: inset 0 0 0 2px var(--enchantix-a), 0 0 10px var(--enchantix-glow); }
+  to   { box-shadow: inset 0 0 0 2px var(--enchantix-b), 0 0 22px var(--enchantix-glow), 0 0 40px rgba(255,121,198,0.2); }
+}
+@keyframes enchantix-star {
+  from { opacity: 0.4; transform: scale(0.9) rotate(-10deg); }
+  to   { opacity: 1;   transform: scale(1.1) rotate(10deg); }
+}
+
+/* ── Вспышка при попадании ── */
+@keyframes flash-hit {
+  0%   { box-shadow: 0 0 0 rgba(255,60,90,0); }
+  25%  { box-shadow: 0 0 14px 3px rgba(255,60,90,0.35); }
+  100% { box-shadow: inset 0 0 0 1px rgba(255,60,90,0.6), 0 0 6px rgba(255,60,90,0.2); }
+}
+.cell.hit { animation: flash-hit 0.4s ease-out forwards; }
+
+/* ── Вспышка Enchantix ── */
+@keyframes enchantix-flash {
+  0%   { background: linear-gradient(135deg, rgba(255,121,198,0.5), rgba(189,147,249,0.5));
+         box-shadow: 0 0 40px 10px rgba(255,121,198,0.8), 0 0 80px rgba(189,147,249,0.5); }
+  60%  { background: linear-gradient(135deg, rgba(255,121,198,0.2), rgba(189,147,249,0.2));
+         box-shadow: 0 0 20px var(--enchantix-glow); }
+  100% { background: var(--cell-bg); box-shadow: none; }
+}
+.cell.enchantix-fired {
+  animation: enchantix-flash 0.85s ease-out forwards;
+}
+
+/* Частицы Enchantix */
+.enchantix-particle {
+  position: absolute;
+  font-size: 13px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 10;
+  animation: particle-fly 0.9s ease-out forwards;
+}
+@keyframes particle-fly {
+  0%   { opacity: 1;  transform: translate(0, 0) scale(1.2); }
+  100% { opacity: 0;  transform: translate(var(--dx, 0px), var(--dy, -20px)) scale(0.2); }
+}
+
+/* Вспышка на весь экран при Enchantix */
+.enchantix-flash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 150;
+  opacity: 0;
+  background: radial-gradient(ellipse at center,
+    rgba(255, 121, 198, 0.22),
+    rgba(189, 147, 249, 0.14) 50%,
+    transparent 72%);
+}
+.enchantix-flash.active {
+  animation: screen-flash 0.85s ease-out forwards;
+}
+@keyframes screen-flash {
+  0%   { opacity: 0; }
+  18%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════
+   КНОПКИ
+═══════════════════════════════════════════ */
+.btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 10px 22px;
+  border: none;
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.1s, opacity 0.15s;
+  position: relative;
+  top: 0;
+}
+.btn:active { top: 2px; }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; top: 0; }
+
+.btn-sub {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.65;
+  margin-top: 3px;
+  letter-spacing: 0;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #020810;
+  box-shadow: 0 0 12px var(--accent-glow), 0 0 0 1px rgba(0,200,255,0.3);
+}
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 0 22px var(--accent-glow), 0 0 0 1px var(--accent);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--grid-line);
+  box-shadow: 0 0 8px rgba(26,58,110,0.4);
+}
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+  color: var(--accent);
+}
+
+/* ── кнопка Enchantix ── */
+.btn-enchantix {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 12px 28px;
+  border-radius: var(--radius-btn);
+  border: none;
+  cursor: pointer;
+  position: relative;
+  top: 0;
+  background: linear-gradient(135deg, var(--enchantix-a), var(--enchantix-b));
+  color: #1a0030;
+  box-shadow:
+    0 0 16px var(--enchantix-glow),
+    0 0 32px rgba(255,121,198,0.3),
+    0 0 0 1px rgba(255,121,198,0.4);
+  animation: enchantix-btn-pulse 1.8s ease-in-out infinite;
+  transition: transform 0.1s, opacity 0.2s;
+}
+.btn-enchantix:active { top: 2px; }
+.btn-enchantix:disabled {
+  background: #2a2a3a;
+  color: #555;
+  box-shadow: none;
+  animation: none;
+  cursor: not-allowed;
+  opacity: 0.5;
+  top: 0;
+}
+@keyframes enchantix-btn-pulse {
+  0%, 100% { box-shadow: 0 0 16px var(--enchantix-glow), 0 0 0 1px rgba(255,121,198,0.4); }
+  50%       { box-shadow: 0 0 30px var(--enchantix-glow), 0 0 60px rgba(189,147,249,0.3), 0 0 0 1px rgba(189,147,249,0.6); }
+}
+
+/* ═══════════════════════════════════════════
+   ЭКРАН ПРАВИЛ
+═══════════════════════════════════════════ */
+.rules-card {
+  display: flex;
+  gap: 32px;
+  background: #0a1628;
+  border: 1px solid var(--grid-line);
+  border-radius: 8px;
+  padding: 28px 36px;
+  margin-bottom: 28px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+  max-width: 560px;
+}
+
+.rules-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.rules-section:first-child {
+  flex: 0 0 auto;
+}
+
+.rules-section-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--accent);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.rules-fleet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rules-ship-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rules-ship-label {
+  font-size: 13px;
+  color: var(--text-dim);
+  min-width: 24px;
+}
+
+.rules-divider {
+  width: 1px;
+  background: var(--grid-line);
+  align-self: stretch;
+}
+
+.rules-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.rules-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rules-marker {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.hit-marker {
+  background: #1e0009;
+  box-shadow: inset 0 0 0 1px rgba(255,60,90,0.6);
+}
+.hit-marker::before,
+.hit-marker::after {
+  content: '';
+  position: absolute;
+  background: var(--hit);
+  border-radius: 1px;
+  top: 50%; left: 50%;
+}
+.hit-marker::before { width: 2px; height: 65%; transform: translate(-50%,-50%) rotate(45deg); }
+.hit-marker::after  { width: 2px; height: 65%; transform: translate(-50%,-50%) rotate(-45deg); }
+
+.miss-marker {
+  background: #111e30;
+  box-shadow: inset 0 0 0 1px var(--grid-line);
+}
+.miss-marker::before {
+  content: '';
+  position: absolute;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--miss);
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+}
+
+.sunk-marker {
+  background: #2d0010;
+  box-shadow: inset 0 0 0 2px rgba(255,60,90,0.9), 0 0 10px rgba(255,60,90,0.4);
+}
+.sunk-marker::before,
+.sunk-marker::after {
+  content: '';
+  position: absolute;
+  background: #ff8096;
+  border-radius: 1px;
+  top: 50%; left: 50%;
+}
+.sunk-marker::before {
+  width: 2px; height: 58%;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.sunk-marker::after {
+  width: 2px; height: 58%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.rules-icon {
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.btn-large {
+  padding: 13px 32px;
+  font-size: 14px;
+}
+
+/* ── Блок Энчантикса на экране правил ── */
+.rules-enchantix {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  margin-bottom: 28px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.rules-enchantix-glow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg,
+    rgba(255, 121, 198, 0.12),
+    rgba(189, 147, 249, 0.10));
+  border: 1px solid rgba(255, 121, 198, 0.35);
+  border-radius: 8px;
+  animation: enchantix-btn-pulse 2.2s ease-in-out infinite;
+}
+
+.rules-enchantix-body {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+}
+
+.rules-enchantix-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  animation: fairy-float 2.8s ease-in-out infinite;
+}
+.rules-enchantix-icon:last-child {
+  animation-delay: 1.4s;
+}
+@keyframes fairy-float {
+  0%, 100% { transform: translateY(0px) rotate(-5deg); }
+  50%       { transform: translateY(-5px) rotate(5deg); }
+}
+
+.rules-enchantix-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rules-enchantix-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--enchantix-a);
+  letter-spacing: 1px;
+  text-shadow: 0 0 8px var(--enchantix-glow);
+}
+
+.rules-enchantix-desc {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.65;
+}
+
+/* ═══════════════════════════════════════════
+   ЭКРАН РАССТАНОВКИ
+═══════════════════════════════════════════ */
+.placement-layout {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.placement-board-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.placement-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 220px;
+  max-width: 260px;
+}
+
+.sidebar-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--accent);
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+/* список кораблей */
+.ship-queue { display: flex; flex-direction: column; gap: 10px; }
+
+.ship-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  opacity: 1;
+  transition: opacity 0.3s;
+}
+.ship-item.placed { opacity: 0.3; text-decoration: line-through; }
+
+.ship-preview {
+  display: flex;
+  gap: 2px;
+}
+.ship-preview::before {
+  content: '';
+  display: block;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--ship);
+  box-shadow: 0 0 6px var(--ship-glow);
+}
+.ship-preview.size-4::before { width: calc(14px * 4 + 2px * 3); }
+.ship-preview.size-3::before { width: calc(14px * 3 + 2px * 2); }
+.ship-preview.size-2::before { width: calc(14px * 2 + 2px * 1); }
+.ship-preview.size-1::before { width: 14px; }
+
+.ship-name {
+  font-size: 12px;
+  color: var(--text);
+}
+
+/* controls */
+.placement-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.orientation-badge {
+  font-size: 12px;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+}
+
+.placement-hint {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  min-height: 38px;
+}
+
+/* ═══════════════════════════════════════════
+   ИГРОВОЙ ЭКРАН
+═══════════════════════════════════════════ */
+.game-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.field-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.score-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
+  gap: 2px;
+}
+.score-label {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.score-value {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 18px;
+  color: var(--ship);
+  text-shadow: 0 0 8px var(--ship-glow);
+}
+
+/* центральная колонка */
+.game-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 40px;
+  gap: 16px;
+  min-width: 140px;
+}
+
+.status-box {
+  background: #0a1628;
+  border: 1px solid var(--grid-line);
+  border-radius: 4px;
+  padding: 10px 16px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  min-width: 130px;
+  box-shadow: 0 0 12px rgba(26,58,110,0.3);
+}
+
+.enchantix-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: center;
+  max-width: 130px;
+}
+
+/* тост-уведомление */
+.toast {
+  position: fixed;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  background: #0e1e38;
+  border: 1px solid var(--grid-line);
+  border-radius: 6px;
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  z-index: 200;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.toast.hit       { color: var(--hit);        border-color: var(--hit);        box-shadow: 0 0 14px var(--hit-glow); }
+.toast.sunk      { color: #ff8096;           border-color: #ff8096;           box-shadow: 0 0 14px var(--hit-glow); }
+.toast.miss      { color: var(--text-dim);   border-color: var(--grid-line); }
+.toast.enchantix { color: var(--enchantix-a); border-color: var(--enchantix-a); box-shadow: 0 0 16px var(--enchantix-glow); }
+.toast.important { color: var(--accent);     border-color: var(--accent);     box-shadow: 0 0 14px var(--accent-glow); }
+
+/* ═══════════════════════════════════════════
+   ЭКРАН КОНЦА ИГРЫ
+═══════════════════════════════════════════ */
+#screen-end {
+  justify-content: center;
+}
+.end-card {
+  background: #0a1628;
+  border: 1px solid var(--grid-line);
+  border-radius: 8px;
+  padding: 48px 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(0,0,0,0.8);
+}
+.end-icon { font-size: 56px; }
+.end-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(16px, 4vw, 28px);
+  color: #ffffff;
+  text-shadow:
+    0 0 6px var(--accent),
+    0 0 14px rgba(0, 200, 255, 0.35);
+  letter-spacing: 2px;
+}
+.end-subtitle {
+  font-size: 14px;
+  color: var(--text-dim);
+  max-width: 280px;
+}
+
+/* ═══════════════════════════════════════════
+   АДАПТИВ — МОБИЛЬНЫЙ
+═══════════════════════════════════════════ */
+@media (max-width: 680px) {
+  :root { --cell: var(--cell-mobile); }
+
+  .screen { padding: 20px 12px 60px; }
+
+  /* ── Расстановка ── */
+  .placement-layout {
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .placement-sidebar {
+    width: 100%;
+    max-width: none;
+    align-items: center;
+    text-align: center;
+  }
+
+  .ship-queue { align-items: center; }
+
+  .placement-controls {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* ── Игра ── */
+  .game-layout {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  /* На мобильном: поле врага — сверху, твоё — снизу */
+  .game-layout .field-wrap:last-child { order: -2; }
+  .game-layout .game-center           { order: -1; }
+
+  .game-center {
+    padding-top: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .status-box   { min-width: auto; font-size: 12px; }
+  .score-value  { font-size: 15px; }
+
+  /* ── Правила ── */
+  .rules-card { flex-direction: column; gap: 20px; padding: 20px; }
+  .rules-divider { width: 100%; height: 1px; }
+  .rules-enchantix-body { padding: 16px; gap: 12px; }
+  .rules-enchantix-icon { font-size: 22px; }
+  .rules-enchantix-icon:last-child { display: none; }
+
+  /* ── Конец игры ── */
+  .end-card {
+    padding: 32px 20px;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .end-icon   { font-size: 40px; }
+
+  /* Тост чуть выше из-за адрес-бара */
+  .toast { bottom: 24px; font-size: 13px; white-space: normal; text-align: center; max-width: 80vw; }
+}

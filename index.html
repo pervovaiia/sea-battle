@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Морской бой</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- CRT overlay -->
+  <div class="crt-overlay"></div>
+  <!-- Enchantix screen flash -->
+  <div class="enchantix-flash" id="enchantix-flash"></div>
+
+  <!-- ══════════════════════════════════════════
+       ЭКРАН 0 — ПРАВИЛА
+  ══════════════════════════════════════════ -->
+  <div id="screen-rules" class="screen active">
+    <h1 class="game-title">Морской бой</h1>
+
+    <div class="rules-card">
+
+      <div class="rules-section">
+        <p class="rules-section-title">Флот</p>
+        <div class="rules-fleet">
+          <div class="rules-ship-row">
+            <span class="ship-preview size-4"></span>
+            <span class="rules-ship-label">× 1 &nbsp;— линкор</span>
+          </div>
+          <div class="rules-ship-row">
+            <span class="ship-preview size-3"></span>
+            <span class="rules-ship-label">× 2 &nbsp;— крейсер</span>
+          </div>
+          <div class="rules-ship-row">
+            <span class="ship-preview size-2"></span>
+            <span class="rules-ship-label">× 3 &nbsp;— эсминец</span>
+          </div>
+          <div class="rules-ship-row">
+            <span class="ship-preview size-1"></span>
+            <span class="rules-ship-label">× 4 &nbsp;— катер</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rules-divider"></div>
+
+      <div class="rules-section">
+        <p class="rules-section-title">Правила</p>
+        <ul class="rules-list">
+          <li><span class="rules-marker hit-marker"></span>Попадание в корабль</li>
+          <li><span class="rules-marker miss-marker"></span>Промах — пустая клетка</li>
+          <li><span class="rules-marker sunk-marker"></span>Корабль потоплен — все клетки закрашены</li>
+          <li><span class="rules-icon">🎯</span>Ходы чередуются, независимо от результата выстрела</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="rules-enchantix">
+      <div class="rules-enchantix-glow"></div>
+      <div class="rules-enchantix-body">
+        <span class="rules-enchantix-icon">🧚</span>
+        <div class="rules-enchantix-text">
+          <p class="rules-enchantix-title">Энчантикс</p>
+          <p class="rules-enchantix-desc">Один раз за игру ты можешь активировать магию фей — удар накрывает зону 3×3. Противник тоже владеет этой силой, будь готов!</p>
+        </div>
+        <span class="rules-enchantix-icon">🧚</span>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-large" id="btn-to-placement">
+      Расставить корабли →
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       ЭКРАН 1 — РАССТАНОВКА КОРАБЛЕЙ
+  ══════════════════════════════════════════ -->
+  <div id="screen-placement" class="screen active">
+    <h1 class="game-title">Морской бой</h1>
+
+    <div class="placement-layout">
+
+      <!-- Левая колонка: поле -->
+      <div class="placement-board-wrap">
+        <p class="board-label">Твоё поле</p>
+        <div class="board" id="board-placement">
+          <!-- клетки генерирует JS -->
+        </div>
+      </div>
+
+      <!-- Правая колонка: инструкции и список кораблей -->
+      <div class="placement-sidebar">
+        <div class="ship-queue" id="ship-queue">
+          <p class="sidebar-title">Расставь корабли</p>
+
+          <div class="ship-item" data-size="4">
+            <span class="ship-preview size-4"></span>
+            <span class="ship-name">Линкор &nbsp;×&thinsp;1</span>
+          </div>
+          <div class="ship-item" data-size="3">
+            <span class="ship-preview size-3"></span>
+            <span class="ship-name">Крейсер ×&thinsp;2</span>
+          </div>
+          <div class="ship-item" data-size="2">
+            <span class="ship-preview size-2"></span>
+            <span class="ship-name">Эсминец ×&thinsp;3</span>
+          </div>
+          <div class="ship-item" data-size="1">
+            <span class="ship-preview size-1"></span>
+            <span class="ship-name">Катер &nbsp;×&thinsp;4</span>
+          </div>
+        </div>
+
+        <div class="placement-controls">
+          <button class="btn btn-secondary" id="btn-rotate">
+            🔄 Повернуть<br><span class="btn-sub" id="orientation-badge">→ Горизонтально</span>
+          </button>
+          <button class="btn btn-secondary" id="btn-undo" disabled>
+            ↩ Отменить
+          </button>
+        </div>
+
+        <div class="placement-hint" id="placement-hint">
+          Выбери клетку, чтобы поставить корабль
+        </div>
+
+        <button class="btn btn-primary" id="btn-start-game" disabled>
+          ▶ Начать игру
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       ЭКРАН 2 — ИГРА
+  ══════════════════════════════════════════ -->
+  <div id="screen-game" class="screen">
+    <h1 class="game-title">Морской бой</h1>
+
+    <div class="game-layout">
+
+      <!-- Поле игрока -->
+      <div class="field-wrap">
+        <p class="board-label">Твоё поле</p>
+        <div class="board" id="board-player">
+          <!-- клетки генерирует JS -->
+        </div>
+        <div class="score-wrap">
+          <span class="score-label">Осталось кораблей</span>
+          <span class="score-value" id="score-player">10</span>
+        </div>
+      </div>
+
+      <!-- Центр: статус и Enchantix -->
+      <div class="game-center">
+        <div class="status-box" id="status-box">
+          <span id="status-text">Твой ход!</span>
+        </div>
+
+        <button class="btn btn-enchantix" id="btn-enchantix">
+          ✨ Энчантикс!<br><span class="btn-sub" id="enchantix-hint">удар 3×3 · один раз</span>
+        </button>
+      </div>
+
+      <!-- Поле врага -->
+      <div class="field-wrap">
+        <p class="board-label">Поле врага</p>
+        <div class="board" id="board-enemy">
+          <!-- клетки генерирует JS -->
+        </div>
+        <div class="score-wrap">
+          <span class="score-label">Осталось кораблей</span>
+          <span class="score-value" id="score-enemy">10</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Тост-уведомление -->
+    <div class="toast" id="toast"></div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       ЭКРАН 3 — КОНЕЦ ИГРЫ
+  ══════════════════════════════════════════ -->
+  <div id="screen-end" class="screen">
+    <div class="end-card">
+      <div class="end-icon" id="end-icon">🏆</div>
+      <h2 class="end-title" id="end-title">ПОБЕДА!</h2>
+      <p class="end-subtitle" id="end-subtitle">Ты потопил весь флот противника</p>
+      <button class="btn btn-primary" id="btn-restart">
+        ↺ Играть снова
+      </button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
