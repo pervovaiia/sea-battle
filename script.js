@@ -276,9 +276,19 @@ function updatePlacementButtons() {
 function updateShipSidebar() {
   const placed = {};
   for (const s of state.playerShips) placed[s.size] = (placed[s.size] || 0) + 1;
+
+  const currentSize = state.shipQueue[0] ?? null;
+
+  // Находим первый ещё не полностью размещённый элемент нужного размера
+  let currentMarked = false;
   document.querySelectorAll('.ship-item').forEach(item => {
     const size = +item.dataset.size;
-    item.classList.toggle('placed', (placed[size] || 0) >= FLEET_COUNTS[size]);
+    const isPlaced = (placed[size] || 0) >= FLEET_COUNTS[size];
+    item.classList.toggle('placed', isPlaced);
+
+    const isCurrent = !isPlaced && size === currentSize && !currentMarked;
+    item.classList.toggle('current', isCurrent);
+    if (isCurrent) currentMarked = true;
   });
 }
 
@@ -442,7 +452,8 @@ function fireEnchantix(r, c) {
   state.enchantixMode   = false;
   state.playerEnchantix = false;
   btnEnchantix.disabled = true;
-  btnEnchantix.style.outline = '';
+  btnEnchantix.classList.remove('active');
+  elEnchHint.textContent = 'удар 3×3 · один раз';
   triggerScreenFlash();
   addLog('✨ Энчантикс! Магия накрыла зону!', 'enchantix');
   spawnZoneBurst(elBoards.enemy, r, c);
@@ -646,7 +657,14 @@ function enemyTurn() {
 btnEnchantix.addEventListener('click', () => {
   if (!state.playerEnchantix || state.turn !== 'player' || state.gameOver) return;
   state.enchantixMode = !state.enchantixMode;
-  btnEnchantix.style.outline = state.enchantixMode ? '2px solid var(--enchantix-a)' : '';
+  if (state.enchantixMode) {
+    btnEnchantix.classList.add('active');
+    elEnchHint.textContent = 'выбери цель →';
+  } else {
+    btnEnchantix.classList.remove('active');
+    elEnchHint.textContent = 'удар 3×3 · один раз';
+  }
+  btnEnchantix.style.outline = '';
 });
 
 function onEnemyCellEnter(e) {
@@ -790,13 +808,15 @@ function init() {
 
   // Сбросить Энчантикс
   btnEnchantix.disabled = false;
-  btnEnchantix.style.outline = '';
+  btnEnchantix.classList.remove('active');
+  elEnchHint.textContent = 'удар 3×3 · один раз';
 
   // Сбросить тост
   if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
   elToast.className = 'toast';
 
   renderPlacementBoard();
+  updateShipSidebar();
   showScreen('rules');
 }
 

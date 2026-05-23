@@ -359,6 +359,16 @@ html, body {
   transition: transform 0.1s, opacity 0.2s;
 }
 .btn-enchantix:active { top: 2px; }
+.btn-enchantix.active {
+  background: linear-gradient(135deg, #fff0fa, #e8d8ff);
+  color: #3a0060;
+  animation: none;
+  box-shadow:
+    0 0 24px var(--enchantix-glow),
+    0 0 48px rgba(255,121,198,0.25),
+    0 0 0 2px var(--enchantix-a);
+}
+
 .btn-enchantix:disabled {
   background: #2a2a3a;
   color: #555;
@@ -627,6 +637,15 @@ html, body {
   transition: opacity 0.3s;
 }
 .ship-item.placed { opacity: 0.3; text-decoration: line-through; }
+
+.ship-item.current {
+  background: rgba(0, 200, 255, 0.07);
+  border: 1px solid rgba(0, 200, 255, 0.25);
+  border-radius: 4px;
+  padding: 5px 8px;
+  margin: -5px -8px;
+  box-shadow: 0 0 10px rgba(0, 200, 255, 0.1);
+}
 
 .ship-preview {
   display: flex;
