@@ -271,6 +271,7 @@ function undoLastShip() {
 function updatePlacementButtons() {
   btnUndo.disabled      = state.playerShips.length === 0;
   btnStartGame.disabled = state.shipQueue.length > 0;
+  btnRotate.disabled    = state.shipQueue.length === 0;
 }
 
 function updateShipSidebar() {
@@ -454,6 +455,7 @@ function fireEnchantix(r, c) {
   btnEnchantix.disabled = true;
   btnEnchantix.classList.remove('active');
   elEnchHint.textContent = 'удар 3×3 · один раз';
+  playEnchantixSound();
   triggerScreenFlash();
   addLog('✨ Энчантикс! Магия накрыла зону!', 'enchantix');
   spawnZoneBurst(elBoards.enemy, r, c);
@@ -609,6 +611,7 @@ function enemyTurn() {
   if (state.enemyEnchantix && state.enemyMoveCount >= state.enemyEnchantixAt) {
     state.enemyEnchantix = false;
     const [er, ec] = randomUnshot(state.enemyShotSet);
+    playEnchantixSound();
     triggerScreenFlash();
     addLog('✨ Энчантикс противника! Магия накрыла зону!', 'enchantix');
     spawnZoneBurst(elBoards.player, er, ec);
@@ -733,6 +736,71 @@ function spawnZoneBurst(boardEl, r, c) {
     centerEl.appendChild(p);
     setTimeout(() => p.remove(), 1100);
   }
+}
+
+// ── Звук Энчантикс ────────────────────────
+
+function playEnchantixSound() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    // Мастер-громкость
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.55, now);
+    master.connect(ctx.destination);
+
+    // Восходящее арпеджио — колокольчики
+    const arpNotes = [
+      { freq: 523.25, t: 0.00, dur: 1.1 },  // C5
+      { freq: 659.25, t: 0.12, dur: 1.0 },  // E5
+      { freq: 783.99, t: 0.24, dur: 0.9 },  // G5
+      { freq: 1046.5, t: 0.36, dur: 1.1 },  // C6
+      { freq: 1318.5, t: 0.52, dur: 1.4 },  // E6 — финальная нота
+    ];
+
+    arpNotes.forEach(({ freq, t, dur }) => {
+      // Основной тон
+      const osc = ctx.createOscillator();
+      const env = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + t);
+      env.gain.setValueAtTime(0, now + t);
+      env.gain.linearRampToValueAtTime(0.22, now + t + 0.018);
+      env.gain.exponentialRampToValueAtTime(0.001, now + t + dur);
+      osc.connect(env); env.connect(master);
+      osc.start(now + t); osc.stop(now + t + dur + 0.05);
+
+      // Обертон (×2) — придаёт блеск
+      const osc2 = ctx.createOscillator();
+      const env2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(freq * 2, now + t);
+      env2.gain.setValueAtTime(0, now + t);
+      env2.gain.linearRampToValueAtTime(0.07, now + t + 0.018);
+      env2.gain.exponentialRampToValueAtTime(0.001, now + t + dur * 0.6);
+      osc2.connect(env2); env2.connect(master);
+      osc2.start(now + t); osc2.stop(now + t + dur);
+    });
+
+    // Блёстки — случайные высокие пики
+    for (let i = 0; i < 16; i++) {
+      const osc = ctx.createOscillator();
+      const env = ctx.createGain();
+      const sparkT    = now + Math.random() * 0.9;
+      const sparkFreq = 2200 + Math.random() * 3600;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(sparkFreq, sparkT);
+      env.gain.setValueAtTime(0, sparkT);
+      env.gain.linearRampToValueAtTime(0.055, sparkT + 0.008);
+      env.gain.exponentialRampToValueAtTime(0.001, sparkT + 0.18);
+      osc.connect(env); env.connect(master);
+      osc.start(sparkT); osc.stop(sparkT + 0.2);
+    }
+
+  } catch (e) { /* AudioContext недоступен */ }
 }
 
 function triggerScreenFlash() {
